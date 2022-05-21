@@ -6,24 +6,20 @@
 #include "GameFramework/Character.h"
 
 // 추가하는 부분
-#include "PlayerCharacterDataStruct.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Components/CapsuleComponent.h"
-#include "IreneFSM.h"
+#include "../StarryTail.h"
+#include "PlayerCharacterDataStruct.h"
 
-#pragma region Park
-#include "StopWatch.h"
-#include "UI/IreneAttributeWidget.h"
-#include "Components/WidgetComponent.h"
-#include "UI/HPBarWidget.h"
-#include "SoundManager.h"
+//박찬영
+//#include "StopWatch.h"
+//#include "Components/WidgetComponent.h"
+
 #include "IreneCharacter.generated.h"
-#pragma endregion Park
 
 //속성 변경 델리데이트
 DECLARE_MULTICAST_DELEGATE(FOnAttributeChangeDelegate);
+
 
 UCLASS()
 class STARRYTAIL_API AIreneCharacter : public ACharacter
@@ -35,14 +31,14 @@ public:
 	FOnAttributeChangeDelegate FOnAttributeChange;
 protected:
 
-private:
 #pragma region GetClassOrObject
+public:
 	// 플레이어 컨트롤러
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY()
 	APlayerController* WorldController;
 
 	// 점프증력 커브
-	UPROPERTY(EditAnywhere)
+	UPROPERTY()
 	UCurveFloat* JumpGravityCurve;
 
 	// 카메라 암과 카메라
@@ -51,104 +47,57 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	UCameraComponent* CameraComp;
 
-	// 캐릭터가 사용하는 변수, 상수 값들 있는 구조체
-	UPROPERTY(EditAnywhere)
-	FPlayerCharacterDataStruct CharacterDataStruct;
-	// 캐릭터 상태
-	IreneFSM* CharacterState;
-
-	// 무기 매쉬
-	UPROPERTY(EditAnywhere)
-	USkeletalMeshComponent* Weapon;
-
-	// 애니메이션 인스턴스
 	UPROPERTY()
 	class UIreneAnimInstance* IreneAnim;
+	UPROPERTY()
+	class UIreneAttackInstance* IreneAttack;
+	UPROPERTY()
+	class UIreneInputInstance* IreneInput;
+
+	// 캐릭터가 사용하는 변수, 상수 값들 있는 구조체
+	UPROPERTY(EditAnywhere)
+	FPlayerCharacterDataStruct IreneData;
+	UPROPERTY(BluePrintReadOnly)
+	class UIreneUIManager* IreneUIManager;
+	UPROPERTY()
+	class UIreneFSM* IreneState;
+
+	//회복 구조체
+	UPROPERTY(EditAnywhere,Category=HpRecorvery)
+	FPlayerRecoveryDataStruct HpRecoveryData;
+	
+	// 무기 매쉬
+	UPROPERTY()
+	USkeletalMeshComponent* Weapon;
+	UPROPERTY()
+	TArray<USkeletalMesh*> WeaponMeshArray;
+	UPROPERTY()
+	TArray<FName> WeaponSocketNameArray;
 
 	UPROPERTY(EditAnywhere)
-	TArray<UCurveFloat*> CameraShakeCurve;
+	TArray<UCurveVector*> CameraShakeCurve;
+	UPROPERTY(EditAnywhere)
+	TArray<UCurveFloat*> CameraLagCurve;
+private:
+	FTimerHandle FixedUpdateCameraShakeTimer;
+	FTimerHandle FixedUpdateCameraLagTimer;
+
+	// 카메라 쉐이크에 사용할 커브
+	UPROPERTY()
+	UCurveVector* UseShakeCurve;
+	// 카메라 렉에 사용할 커브
+	UPROPERTY()
+	UCurveFloat* UseLagCurve;
+
+	float CameraLagTime;
 
 #pragma endregion GetClassOrObject
 
-#pragma region InputData
-	// 움직임에 사용하는 키 0: 정지, 1: 걷기, 2: 달리기, 3: 걷기 예약키, 4: 달리기 예약키
-	UPROPERTY(EditAnywhere)
-	TArray<uint8> MoveKey;
-
-	// 구르기 같은 자동이동 방향
-	FVector MoveAutoDirection;
-	// 자동이동용 핸들
-	FTimerHandle MoveAutoWaitHandle;
-	// 추락중 구르기 시 빠르게 떨어지는 지 확인
-	bool IsFallingRoll;
-
-	// 공격 연속 입력 지연
-	FTimerHandle AttackWaitHandle;
-
-	// 차징 중인지
-	bool IsCharging;
-	// 차징 시간
-	float ChargingTime;
-
-	// 점프 중력 그래프용 시작 타이밍
-	bool bStartJump;
-	// 점프 중력 그래프용 시간
-	float JumpingTime;
-#pragma endregion MoveData
-
-#pragma region AttackData
-	// 타겟 몬스터 또는 오브젝트
-	AActor* TargetMonster;
-
-	//캐릭터 속성
-	UPROPERTY(EditAnywhere)
-	EAttributeKeyword Attribute;
-
-	// 타켓 추적 유무
-	bool bFollowTarget;
-	// 보간을 위한 수 0 ~ 1
-	float FollowTargetAlpha;
-	// 보간을 위한 시작 위치
-	FVector PlayerPosVec;
-	// 보간을 위한 목표 위치
-	FVector TargetPosVec;
-
-	// 카메라 쉐이크 시간
-	float CameraShakeTime;
-#pragma endregion AttackData
-
-#pragma region UI
-#pragma region Park
-	//속성 ui
-	UPROPERTY(VisibleAnywhere, Category = UI)
-	class UWidgetComponent* AttributeWidget;
-	//Hp Bar 위젯
-	UPROPERTY(VisibleAnywhere, Category = UI)
-	class UWidgetComponent* HpBarWidget;
-#pragma endregion Park
-
-	// 로그 출력용
-	bool bShowLog;
-#pragma endregion UI	
-
-#pragma region Sound
-#pragma region Park
-	//사운드 이벤트
-	UPROPERTY(EditAnywhere, Category = "FMOD")
-	class UFMODEvent* AttackEvent;
-	UPROPERTY(EditAnywhere, Category = "FMOD")
-	class UFMODEvent* WalkEvent;
-
-	//사운드 
-	SoundManager* WalkSound;
-	SoundManager* AttackSound;
-#pragma endregion Park
-#pragma endregion Sound
-
 	//스탑워치
 	//AStopWatch* StopWatch;
-public:
+	
 #pragma region Setting
+public:
 	// Sets default values for this character's properties
 	AIreneCharacter();
 
@@ -156,104 +105,62 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-#pragma endregion Setting
 
+	void TargetReset()const;
+#pragma endregion Setting
+	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	//속성 반환
-	EAttributeKeyword GetAttribute();
-	//공격력 반환
-	float GetATK();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-private:
-
-	// 캐릭터 이동 관련 함수
-#pragma region MoveInput
-	void MoveForward();
-	void MoveRight();
-	void MoveStop();
-	void MoveAuto();
-
-	void StartJump();
-	void StopJump();
-
-	void MovePressedW();
-	void MovePressedA();
-	void MovePressedS();
-	void MovePressedD();
-	void MoveDoubleClickW();
-	void MoveDoubleClickA();
-	void MoveDoubleClickS();
-	void MoveDoubleClickD();
-	void MoveReleasedW();
-	void MoveReleasedA();
-	void MoveReleasedS();
-	void MoveReleasedD();
-#pragma endregion MoveInput
-
-	// 입력 관련 함수
-#pragma region Input
-	// 카메라 회전 관련 함수
-	void Turn(float Rate);
-	void LookUp(float Rate);
-
-	// 마우스 버튼 및 휠
-	void LeftButton(float Rate);
-	void RightButtonPressed();
-	void RightButtonReleased();
-	void MouseWheel(float Rate);
-
-	// 메인키워드 속성변경
-	void MainKeyword();
-
-	// 대쉬
-	void DodgeKeyword();
-
-	// 마우스 커서 활성화
-	void MouseCursorKeyword();
-#pragma endregion Input
-
 #pragma region State
+public:
 	// 상태 변화 후 로그 출력
-	void ChangeStateAndLog(State* newState);
-	void ActionEndChangeMoveState();
+	void ChangeStateAndLog(class IState* NewState)const;
+	void ActionEndChangeMoveState()const;
 #pragma endregion State
-
-#pragma region Attack
-	UFUNCTION()
-	void OnAttackMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-
-	void AttackStartComboState();
-	void AttackEndComboState();
-	void AttackCheck();
-	void AttackStopCheck();
-	void DoAttack();
-#pragma endregion Attack
 	
 #pragma region Collision
+public:
 	// 가까운 몬스터 찾기
 	void FindNearMonster();
-
+	void NearMonsterAnalysis(const TArray<FHitResult> MonsterList, const bool bResult, const FCollisionQueryParams Params, const float Far)const;
+	void SetNearMonster(const FHitResult RayHit, float& NearPosition, const float FindNearTarget)const;
 	// 겹침 충돌 처리
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 	virtual void NotifyActorEndOverlap(AActor* OtherActor) override;
+	virtual void NotifyHit(UPrimitiveComponent *MyComp, AActor *Other, UPrimitiveComponent *OtherComp, bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult &Hit) override;
 
 	// 피격
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)override;
 #pragma endregion Collision
 
-#pragma region Park
-	//현재 체력 비율 전환
-	float GetHpRatio();
+#pragma region HitFeel
+	public:
+	UFUNCTION(BlueprintImplementableEvent)
+	void HitStopEvent();
+	UFUNCTION(BlueprintImplementableEvent)
+	void RadialBlurEvent	();
 
-	//사운드 출력
-	void FootStepSound();
-	//스탑워치 
-	//void WatchContorl();
+	void OnRadialBlur();
+
+	void LastAttackCameraShake(const float DeltaTime);
+	void SetUseShakeCurve(UCurveVector* Curve);
+	void DoCameraLagCurve(const float DeltaTime);
+	void SetUseCameraLag(UCurveFloat* Curve);
+	
+	UPROPERTY(BluePrintReadWrite)
+	bool CameraShakeOn;
+
+	UPROPERTY(BluePrintReadWrite)
+	bool IsTimeStopping;
+#pragma endregion HitFeel
+//스탑워치 
+	//void WatchControl();
 	//void WatchReset();
-#pragma endregion Park
+	FPlayerCharacterDataStruct* GetDataStruct(){return &IreneData;}
+	void SetCameraLagTime(const float Value){CameraLagTime = Value;}
 };

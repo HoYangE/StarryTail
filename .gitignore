@@ -1,0 +1,14 @@
+StarryTail/.vs/
+StarryTail/.idea/
+StarryTail/Binaries/
+StarryTail/Build/
+StarryTail/Intermediate/
+StarryTail/Saved/
+StarryTail/StarryTail.sln
+StarryTail/StarryTail.sln.DotSettings.user
+StarryTail/Plugins/
+!Config/
+!Content/
+!Source/
+!StarryTail.uproject
+*_BuiltData.uasset

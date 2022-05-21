@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "IreneCharacter.h"
+#include "../StarryTail.h"
 
 #include "IreneAnimInstance.generated.h"
 
@@ -12,16 +12,22 @@ DECLARE_MULTICAST_DELEGATE(FOnNextAttackCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttackHitCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnAttackStopCheckDelegate);
 DECLARE_MULTICAST_DELEGATE(FOnFootStepDelegate);
+DECLARE_MULTICAST_DELEGATE(FOnRadialDelegate);
+
 /**
  * 
  */
+enum class EStateEnum: uint8;
+
 UCLASS()
 class STARRYTAIL_API UIreneAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
 	
 public:
-
+	UPROPERTY()
+	class AIreneCharacter* Irene;
+	
 protected:
 
 private:
@@ -36,39 +42,65 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
 	bool IsSprintStop;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
-	StateEnum IreneState;
+	EStateEnum IreneState;
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
-	UAnimMontage* AttackMontage;
+	UAnimMontage* FireAttackMontage;
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
-	UAnimMontage* EffectAttackMontage;
+	UAnimMontage* WaterAttackMontage;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	UAnimMontage* ThunderAttackMontage;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	UAnimMontage* FireSkillMontage;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	UAnimMontage* WaterSkillMontage;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	UAnimMontage* ThunderSkillMontage;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	EAttributeKeyword Attribute;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	bool IsHaveTargetMonster;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = Pawn, Meta = (AllowPrivateAccess = true))
+	AActor* TargetMonster;
 
 public:
+	void Init(AIreneCharacter* Value);
+	void SetIreneCharacter(AIreneCharacter* Value);
+	void InitMemberVariable();
+	
 	UIreneAnimInstance();
-	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void NativeUpdateAnimation(const float DeltaSeconds) override;
 
 	void PlayAttackMontage();
-	void PlayEffectAttackMontage();
-	void JumpToAttackMontageSection(int32 NewSection);
-	UAnimMontage* GetAttackAnimMontage() { return AttackMontage; }
-	void SetDeadAnim(bool value) { IsDead = value; }
-	void SetSprintStateAnim(bool value) { IsSprintState = value; }
-	void SetSprintStopAnim(bool value) { IsSprintStop = value; }
-	void SetIreneStateAnim(StateEnum value) { IreneState = value; }
-
+	void PlaySkillAttackMontage();
+	void NextToAttackMontageSection(const int32 NewSection);
+	void JumpToAttackMontageSection(const int32 NewSection);
+	void NextToEffectAttackMontageSection(const int32 NewSection);
+	
+	void SetDeadAnim(const bool Value) { IsDead = Value; }
+	void SetSprintStateAnim(const bool Value) { IsSprintState = Value; }
+	void SetSprintStopAnim(const bool Value) { IsSprintStop = Value; }
+	void SetIreneStateAnim(const EStateEnum Value) { IreneState = Value; }
+	void SetAttribute(const EAttributeKeyword Value) { Attribute = Value; }
+	void SetIsHaveTargetMonster(const bool Value) { IsHaveTargetMonster = Value; }
+	void SetTargetMonster(AActor* Value) { TargetMonster = Value; }
+	
 	FOnNextAttackCheckDelegate OnNextAttackCheck;
 	FOnAttackHitCheckDelegate OnAttackHitCheck;
 	FOnAttackStopCheckDelegate OnAttackStopCheck;
 	FOnFootStepDelegate OnFootStep;
+	FOnRadialDelegate OnRadialBlur;
 protected:
 
 private:
 	UFUNCTION()
-	void AnimNotify_AttackHitCheck();
+	void AnimNotify_AttackHitCheck() const;
 	UFUNCTION()
-	void AnimNotify_NextAttackCheck();
+	void AnimNotify_NextAttackCheck() const;
 	UFUNCTION()
-	void AnimNotify_AttackStopCheck();
+	void AnimNotify_AttackStopCheck() const;
 	UFUNCTION()
-	void AnimNotify_FootStep();
-	FName GetAttackMontageSectionName(int32 Section);
+	void AnimNotify_FootStep() const;
+	UFUNCTION()
+	void AnimNotify_RadialBlur	() const;
+	FName GetAttackMontageSectionName(const int32 Section);
 };
